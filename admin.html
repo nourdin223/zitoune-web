@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — BILALE SPORT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ⚠️ نفس بيانات Supabase كالمتجر
+  const SUPABASE_URL = 'sb_publishable_s4bZHacysstOUFB0yCrRmw_eM5S0BGw';
+  const SUPABASE_KEY = 'https://lfzvccogpenqwcemswfw.supabase.co';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
+<style>
+  :root {
+    --bg: #0a0a0a; --surface: #111; --card: #181818;
+    --border: #2a2a2a; --text: #f0f0f0; --muted: #888;
+    --gold: #c9a96e; --danger: #e05252; --success: #4caf50;
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+  }
+  .login-box {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:40px; width:100%; max-width:380px;
+  }
+  .login-box h2 { font-size:20px; font-weight:500; margin-bottom:8px; }
+  .login-box p { color:var(--muted); font-size:13px; margin-bottom:28px; }
+  .login-error { color:var(--danger); font-size:13px; margin-bottom:12px; display:none; }
+
+  /* DASHBOARD */
+  #dashboard { display:none; }
+  .topbar {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:0 24px; height:60px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:10;
+  }
+  .topbar-brand { font-size:15px; font-weight:600; color:var(--gold); }
+  .topbar-user { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:16px; }
+  .btn-logout {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; transition:all .2s;
+  }
+  .btn-logout:hover { border-color:var(--danger); color:var(--danger); }
+
+  .main { display:grid; grid-template-columns:1fr 1fr; gap:24px; padding:24px; max-width:1200px; margin:0 auto; }
+  @media(max-width:768px) { .main { grid-template-columns:1fr; } }
+
+  /* STATS */
+  .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; max-width:1200px; margin:16px auto 0; padding:0 24px; }
+  @media(max-width:640px) { .stats-row { grid-template-columns:1fr; } }
+  .stat-card {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; text-align:center;
+  }
+  .stat-card .num { font-size:28px; font-weight:700; color:var(--gold); }
+  .stat-card .label { font-size:12px; color:var(--muted); margin-top:4px; }
+
+  /* PANELS */
+  .panel {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .panel-header {
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .panel-header h3 { font-size:15px; font-weight:500; }
+  .panel-body { padding:20px; }
+
+  /* FORM */
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; letter-spacing:.5px; }
+  .form-group input, .form-group textarea, .form-group select {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); padding:10px 14px; border-radius:8px; font-size:14px;
+    outline:none; transition:border-color .2s; font-family:inherit;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color:var(--gold); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .img-preview {
+    width:100%; aspect-ratio:16/9; border:1px dashed var(--border); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; color:var(--muted);
+    font-size:13px; margin-bottom:14px; overflow:hidden; background:var(--surface);
+  }
+  .img-preview img { width:100%; height:100%; object-fit:cover; }
+  .btn-submit {
+    width:100%; padding:12px; background:var(--gold); color:#000;
+    border:none; border-radius:8px; font-size:14px; font-weight:600;
+    cursor:pointer; transition:opacity .2s;
+  }
+  .btn-submit:hover { opacity:.85; }
+  .btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* PRODUCTS LIST */
+  .product-row {
+    display:flex; align-items:center; gap:14px; padding:12px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .product-row:last-child { border-bottom:none; }
+  .product-row img { width:52px; height:52px; object-fit:cover; border-radius:8px; background:var(--surface); }
+  .product-row-info { flex:1; min-width:0; }
+  .product-row-name { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .product-row-price { font-size:13px; color:var(--gold); margin-top:2px; }
+  .btn-delete {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px;
+    transition:all .2s; flex-shrink:0;
+  }
+  .btn-delete:hover { border-color:var(--danger); color:var(--danger); }
+  .toggle-active {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    padding:5px 10px; border-radius:6px; cursor:pointer; font-size:11px;
+    transition:all .2s; flex-shrink:0;
+  }
+  .toggle-active.active { border-color:var(--success); color:var(--success); }
+
+  /* ORDERS */
+  .order-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:14px; margin-bottom:10px;
+  }
+  .order-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .order-product { font-size:14px; font-weight:500; }
+  .order-price { font-size:14px; color:var(--gold); font-weight:600; }
+  .order-meta { font-size:12px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+  .order-status {
+    display:inline-block; font-size:10px; padding:3px 10px; border-radius:20px;
+    font-weight:600; letter-spacing:.5px;
+  }
+  .status-pending { background:rgba(201,169,110,.15); color:var(--gold); }
+  .status-confirmed { background:rgba(76,175,80,.15); color:var(--success); }
+  .status-cancelled { background:rgba(224,82,82,.15); color:var(--danger); }
+  .btn-confirm {
+    background:none; border:1px solid var(--success); color:var(--success);
+    padding:4px 10px; border-radius:5px; cursor:pointer; font-size:11px; transition:all .2s;
+  }
+  .btn-confirm:hover { background:var(--success); color:#000; }
+
+  /* FORM TABS */
+  .tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  .tab {
+    padding:10px 18px; font-size:13px; cursor:pointer; border-bottom:2px solid transparent;
+    color:var(--muted); transition:all .2s; background:none; border-top:none;
+    border-left:none; border-right:none; color:var(--muted);
+  }
+  .tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+
+  /* EMPTY/LOADING */
+  .empty { text-align:center; color:var(--muted); padding:32px; font-size:13px; }
+  .mini-spinner {
+    width:20px; height:20px; border:2px solid var(--border);
+    border-top-color:var(--gold); border-radius:50%;
+    animation:spin .7s linear infinite; margin:0 auto;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* INPUTS shared */
+  input, textarea, select { color-scheme:dark; }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:20px; right:20px;
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:10px 20px; border-radius:8px; font-size:13px; z-index:999;
+    transform:translateY(80px); opacity:0; transition:all .3s; pointer-events:none;
+  }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.ok { border-color:var(--success); color:var(--success); }
+  .toast.err { border-color:var(--danger); color:var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2>🔐 Admin BILALE SPORT</h2>
+    <p>Connectez-vous pour gérer votre boutique</p>
+    <div class="login-error" id="login-error">Email ou mot de passe incorrect</div>
+    <div class="form-group">
+      <label>EMAIL</label>
+      <input type="email" id="login-email" placeholder="admin@bilalesport.ma"/>
+    </div>
+    <div class="form-group">
+      <label>MOT DE PASSE</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn-submit" id="login-btn" onclick="doLogin()">Se connecter</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <span class="topbar-brand">⚡ Admin — BILALE SPORT</span>
+    <div class="topbar-user">
+      <span id="user-email"></span>
+      <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="num" id="stat-products">—</div>
+      <div class="label">Produits actifs</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-orders">—</div>
+      <div class="label">Commandes totales</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-pending">—</div>
+      <div class="label">En attente</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- PANEL GAUCHE: Ajouter produit + liste -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- AJOUTER PRODUIT -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>➕ Ajouter un produit</h3>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>NOM DU PRODUIT *</label>
+            <input type="text" id="p-name" placeholder="Ex: TA01-R Rouge"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>PRIX (MAD) *</label>
+              <input type="number" id="p-price" placeholder="199"/>
+            </div>
+            <div class="form-group">
+              <label>ANCIEN PRIX</label>
+              <input type="number" id="p-old-price" placeholder="299 (optionnel)"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>URL IMAGE *</label>
+            <input type="url" id="p-image" placeholder="https://..." oninput="previewImg(this.value)"/>
+          </div>
+          <div class="img-preview" id="img-preview">
+            <span>Aperçu de l'image</span>
+          </div>
+          <div class="form-group">
+            <label>DESCRIPTION</label>
+            <input type="text" id="p-desc" placeholder="Courte description du produit"/>
+          </div>
+          <div class="form-group">
+            <label>BADGE (optionnel)</label>
+            <input type="text" id="p-badge" placeholder="Ex: Promo · Nouveau · Top vente"/>
+          </div>
+          <button class="btn-submit" id="add-btn" onclick="addProduct()">✓ Ajouter au catalogue</button>
+        </div>
+      </div>
+
+      <!-- LISTE PRODUITS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>📦 Catalogue</h3>
+          <span style="font-size:12px;color:var(--muted)" id="products-count">Chargement...</span>
+        </div>
+        <div class="panel-body" id="products-list">
+          <div class="empty"><div class="mini-spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DROIT: Commandes -->
+    <div class="panel" style="align-self:start;">
+      <div class="panel-header">
+        <h3>📋 Commandes</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="order-filter" onchange="loadOrders()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;outline:none;">
+            <option value="all">Toutes</option>
+            <option value="pending">En attente</option>
+            <option value="confirmed">Confirmées</option>
+            <option value="cancelled">Annulées</option>
+          </select>
+          <button onclick="loadOrders()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;">↻</button>
+        </div>
+      </div>
+      <div class="panel-body" id="orders-list">
+        <div class="empty"><div class="mini-spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// AUTH
+// =============================================
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+
+  if (!email || !pass) { err.style.display='block'; err.textContent='Remplissez tous les champs.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Connexion...';
+  err.style.display = 'none';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+  if (error) {
+    err.style.display = 'block';
+    err.textContent = 'Email ou mot de passe incorrect.';
+    btn.disabled = false;
+    btn.textContent = 'Se connecter';
+    return;
+  }
+
+  showDashboard(data.user);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showDashboard(user) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('user-email').textContent = user.email;
+  loadAll();
+}
+
+// Vérifier session au chargement
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data } = await sb.auth.getSession();
+  if (data.session) showDashboard(data.session.user);
+});
+
+// =============================================
+// CHARGER TOUT
+// =============================================
+async function loadAll() {
+  await Promise.all([loadProducts(), loadOrders(), loadStats()]);
+}
+
+// =============================================
+// STATS
+// =============================================
+async function loadStats() {
+  const [{ count: pCount }, { count: oCount }, { count: pendCount }] = await Promise.all([
+    sb.from('products').select('*', { count:'exact', head:true }).eq('active', true),
+    sb.from('orders').select('*', { count:'exact', head:true }),
+    sb.from('orders').select('*', { count:'exact', head:true }).eq('status','pending'),
+  ]);
+  document.getElementById('stat-products').textContent = pCount ?? 0;
+  document.getElementById('stat-orders').textContent = oCount ?? 0;
+  document.getElementById('stat-pending').textContent = pendCount ?? 0;
+}
+
+// =============================================
+// PRODUITS
+// =============================================
+async function loadProducts() {
+  const { data } = await sb.from('products').select('*').order('created_at', { ascending:false });
+  const list = document.getElementById('products-list');
+  const countEl = document.getElementById('products-count');
+
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty">Aucun produit. Ajoutez-en un !</div>';
+    countEl.textContent = '0 produit';
+    return;
+  }
+
+  countEl.textContent = data.length + ' produit' + (data.length>1?'s':'');
+  list.innerHTML = data.map(p => `
+    <div class="product-row" id="row-${p.id}">
+      <img src="${p.image}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/52/181818/gold?text=?'"/>
+      <div class="product-row-info">
+        <div class="product-row-name">${p.name}</div>
+        <div class="product-row-price">${Number(p.price).toLocaleString('fr-FR')} MAD${p.old_price ? ' · <s style="color:var(--muted);font-size:11px">'+Number(p.old_price).toLocaleString('fr-FR')+'</s>' : ''}</div>
+      </div>
+      <button class="toggle-active ${p.active ? 'active' : ''}" onclick="toggleProduct('${p.id}', ${p.active})" title="${p.active ? 'Visible' : 'Masqué'}">
+        ${p.active ? '👁 Visible' : '🙈 Masqué'}
+      </button>
+      <button class="btn-delete" onclick="deleteProduct('${p.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addProduct() {
+  const name     = document.getElementById('p-name').value.trim();
+  const price    = parseFloat(document.getElementById('p-price').value);
+  const oldPrice = parseFloat(document.getElementById('p-old-price').value) || null;
+  const image    = document.getElementById('p-image').value.trim();
+  const desc     = document.getElementById('p-desc').value.trim();
+  const badge    = document.getElementById('p-badge').value.trim();
+
+  if (!name || !price || !image) {
+    showToast('⚠️ Nom, prix et image sont obligatoires', 'err'); return;
+  }
+
+  const btn = document.getElementById('add-btn');
+  btn.disabled = true; btn.textContent = 'Ajout en cours...';
+
+  const { error } = await sb.from('products').insert({
+    name, price, old_price: oldPrice, image, description: desc, badge: badge || null, active: true
+  });
+
+  btn.disabled = false; btn.textContent = '✓ Ajouter au catalogue';
+
+  if (error) { showToast('❌ Erreur: ' + error.message, 'err'); return; }
+
+  // Reset form
+  ['p-name','p-price','p-old-price','p-image','p-desc','p-badge'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('img-preview').innerHTML = '<span>Aperçu de l\'image</span>';
+
+  showToast('✓ Produit ajouté avec succès !', 'ok');
+  loadProducts();
+  loadStats();
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Supprimer ce produit ?')) return;
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { showToast('❌ Erreur suppression', 'err'); return; }
+  document.getElementById('row-' + id)?.remove();
+  showToast('✓ Produit supprimé', 'ok');
+  loadStats();
+}
+
+async function toggleProduct(id, currentActive) {
+  const { error } = await sb.from('products').update({ active: !currentActive }).eq('id', id);
+  if (error) { showToast('❌ Erreur', 'err'); return; }
+  loadProducts();
+}
+
+function previewImg(url) {
+  const prev = document.getElementById('img-preview');
+  if (url && url.startsWith('http')) {
+    prev.innerHTML = `<img src="${url}" alt="aperçu" onerror="this.parentElement.innerHTML='<span>Image introuvable</span>'"/>`;
+  } else {
+    prev.innerHTML = '<span>Aperçu de l\'image</span>';
+  }
+}
+
+// =============================================
+// COMMANDES
+// =============================================
+async function loadOrders() {
+  const filter = document.getElementById('order-filter').value;
+  let query = sb.from('orders').select('*').order('created_at', { ascending:false }).limit(50);
+  if (filter !== 'all') query = query.eq('status', filter);
+
+  const { data, error } = await query;
+  const list = document.getElementById('orders-list');
+
+  if (error || !data || data.length === 0) {
+    list.innerHTML = '<div class="empty">Aucune commande pour le moment.</div>';
+    return;
+  }
+
+  list.innerHTML = data.map(o => {
+    const date = new Date(o.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const statusClass = 'status-' + (o.status || 'pending');
+    const statusLabel = o.status === 'confirmed' ? 'Confirmée' : o.status === 'cancelled' ? 'Annulée' : 'En attente';
+    return `
+      <div class="order-card" id="order-${o.id}">
+        <div class="order-header">
+          <span class="order-product">${o.product_name}</span>
+          <span class="order-price">${Number(o.product_price).toLocaleString('fr-FR')} MAD</span>
+        </div>
+        <div class="order-meta">
+          <span>📞 ${o.customer_phone || '—'}</span>
+          <span>📍 ${o.city || '—'}</span>
+          <span>🚚 ${o.delivery === 'livraison' ? 'Livraison' : 'Retrait'}</span>
+          <span>🕐 ${date}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <span class="order-status ${statusClass}">${statusLabel}</span>
+          ${o.status === 'pending' ? `
+            <button class="btn-confirm" onclick="updateOrderStatus('${o.id}','confirmed')">✓ Confirmer</button>
+            <button class="btn-confirm" style="border-color:var(--danger);color:var(--danger)" onclick="updateOrderStatus('${o.id}','cancelled')">✕ Annuler</button>
+          ` : ''}
+          ${o.customer_phone ? `<a href="https://wa.me/${o.customer_phone.replace(/\D/g,'')}" target="_blank" style="font-size:11px;color:var(--gold);text-decoration:none;">💬 WA</a>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function updateOrderStatus(id, status) {
+  const { error } = await sb.from('orders').update({ status }).eq('id', id);
+  if (error) { showToast('❌ Erreur', 'err'); return; }
+  showToast(status === 'confirmed' ? '✓ Commande confirmée' : '✕ Commande annulée', 'ok');
+  loadOrders();
+  loadStats();
+}
+
+// =============================================
+// UTILS
+// =============================================
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className='toast', 3500);
+}
+</script>
+</body>
+</html>
